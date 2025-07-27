@@ -1,0 +1,51 @@
+# Local Terraform state
+*.tfstate
+*.tfstate.backup
+
+# Terraform crash logs
+crash.log
+
+# Terraform plan files
+*.tfplan
+
+# Override files for local usage
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+*/environments/dev/*.tfvars
+
+# Variable files with secrets
+*.tfvars
+*.tfvars.json
+
+# Sensitive env files
+.env
+
+# CLI .terraform directory
+.terraform/
+.terraform.lock.hcl
+
+# VS Code
+.vscode/
+
+# macOS files
+.DS_Store
+
+# System files
+Thumbs.db
+
+# Output & logs
+output.log
+logs/
+l
+
+# Ignore all Terraform working directories and providers
+*/.terraform/**
+.terraform.lock.hcl
+*/environments/dev/.terraform/
+*/environments/dev/.terraform.lock.hcl
+*/environments/stage/.terraform/
+*/environments/stage/.terraform.lock.hcl
+*/environments/prod/.terraform/
+*/environments/prod/.terraform.lock.hcl

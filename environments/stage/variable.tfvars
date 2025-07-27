@@ -1,0 +1,7 @@
+location = "East US"
+tenant_id = "<your-tenant-id>"
+object_id = "<your-object-id>"
+admin_username = "azureuser"
+db_username = "postgres"
+public_key_path = "~/.ssh/id_rsa.pub"
+private_key_path = "~/.ssh/id_rsa"
