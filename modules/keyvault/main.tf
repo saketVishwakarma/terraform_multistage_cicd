@@ -1,3 +1,5 @@
+
+
 resource "azurerm_key_vault" "vault" {
   name                        = var.name
   location                    = var.location
@@ -9,8 +11,8 @@ resource "azurerm_key_vault" "vault" {
   access_policy {
     tenant_id = var.tenant_id
     object_id = var.object_id
-    key_permissions = ["get", "list"]
-    secret_permissions = ["get", "set"]
+    key_permissions = ["Get", "List"]
+    secret_permissions = ["Get", "Set"]
   }
   lifecycle {
     prevent_destroy = true

@@ -1,0 +1,139 @@
+name: Reusable Terraform Template
+
+description: >
+  Template to plan, apply, or destroy Terraform infrastructure per environment.
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      action:
+        required: true
+        type: string # 'plan' | 'apply' | 'destroy'
+
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+      TF_DEV_LOCATION:
+        required: true
+      TF_DEV_ADMIN_USERNAME:
+        required: true
+      SLACK_WEBHOOK_URL:
+        required: false
+      TF_DEV_DB_USERNAME:
+        required: true
+      TF_DEV_DB_PASSWORD:
+         required: true
+      TF_DEV_KEYVAULT_NAME:
+        required: true
+      TF_DEV_SKU_NAME:
+        required: true
+
+jobs:
+  terraform:
+    name: Terraform ${{ inputs.action }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: environments/${{ inputs.environment }}
+
+    environment:
+      name: terraform-${{ inputs.environment }}
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Terraform Init
+        run: terraform init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        if: inputs.action == 'plan'
+        run: >
+          terraform plan \
+            -var="location=${{ secrets.TF_DEV_LOCATION }}" \
+            -var="admin_username=${{ secrets.TF_DEV_ADMIN_USERNAME }}" \
+            -var="tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
+            -var="db_username=${{ secrets.TF_DEV_DB_USERNAME }}" \
+            -var="db_password=${{ secrets.TF_DEV_DB_PASSWORD }}" \
+            -var="sku_name=${{ secrets.TF_DEV_SKU_NAME }}" \
+            -out=tfplan
+
+      - name: Upload Plan Artifact
+        if: inputs.action == 'plan'
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfplan-${{ inputs.environment }}
+          path: environments/${{ inputs.environment }}/tfplan
+
+      - name: Terraform Apply
+        if: inputs.action == 'apply'
+        run: terraform apply -auto-approve tfplan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+
+      - name: Terraform Destroy
+        if: inputs.action == 'destroy'
+        run: >
+          terraform plan -destroy \
+            -var="location=${{ secrets.TF_DEV_LOCATION }}" \
+            -var="admin_username=${{ secrets.TF_DEV_ADMIN_USERNAME }}" \
+            -var="tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
+            -var="db_username=${{ secrets.TF_DEV_DB_USERNAME }}" \
+            -var="db_password=${{ secrets.TF_DEV_DB_PASSWORD }}" \
+            -var="sku_name=${{ secrets.TF_DEV_SKU_NAME }}" \
+            -out=tfplan && terraform apply -auto-approve tfplan
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+
+      - name: Slack Notification - Success
+        if: inputs.action == 'apply'
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+            -H 'Content-type: application/json' \
+            --data '{
+              "text": "✅ Terraform *Apply* Succeeded for *${{ inputs.environment }}*.",
+              "username": "Terraform Bot",
+              "icon_emoji": ":white_check_mark:"
+            }'
+
+      - name: Slack Notification - Destroy
+        if: inputs.action == 'destroy'
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+            -H 'Content-type: application/json' \
+            --data '{
+              "text": "⚠️ Terraform *Destroy* Executed for *${{ inputs.environment }}*.",
+              "username": "Terraform Bot",
+              "icon_emoji": ":warning:"
+            }'

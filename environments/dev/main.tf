@@ -24,6 +24,9 @@ module "storage" {
      location               = var.location
      resource_group_name    = module.resource_group.name
 }
+data "azuread_service_principal" "terraform_sp" {
+  display_name = "terrraform-sp"
+}
 module "keyvault" {
      source              = "../../modules/keyvault"
      name                = "dev-keyvault"
@@ -31,13 +34,55 @@ module "keyvault" {
      db_password         = var.db_password
      resource_group_name = module.resource_group.name
      tenant_id           = var.tenant_id
-     object_id           = var.object_id
+     object_id = data.azuread_service_principal.terraform_sp.object_id
      depends_on          = [module.storage]
 }
+
+data "azurerm_key_vault_secret" "ssh_private_key" {
+  name         = "dev-ssh-private-key"
+  key_vault_id = module.keyvault.vault_id
+  depends_on   = [module.keyvault]
+}
+
+data "azurerm_key_vault_secret" "ssh_public_key" {
+  name         = "dev-ssh-public-key"
+  key_vault_id = module.keyvault.vault_id
+  depends_on   = [module.keyvault]
+}
+
+data "azurerm_key_vault_secret" "db_password" {
+  name         = "db-password"                   # name of the secret in Key Vault
+  key_vault_id = module.keyvault.vault_id   # ensure this matches your Key Vault module output
+  depends_on   = [module.keyvault]
+}
+
+
+module "ssh_keys" {
+  source                   = "../../modules/ssh_keys_to_keyvault"
+  keyvault_id             = module.keyvault.vault_id
+  private_key_secret_name = "dev-ssh-private-key"
+  public_key_secret_name  = "dev-ssh-public-key"
+  depends_on = [ module.keyvault ]
+}
+data "azurerm_key_vault_secret" "ssh_private_key" {
+  name         = "dev-ssh-private-key"
+  key_vault_id = module.keyvault.vault_id
+  depends_on   = [module.keyvault]
+}
+
+data "azurerm_key_vault_secret" "ssh_public_key" {
+  name         = "dev-ssh-public-key"
+  key_vault_id = module.keyvault.vault_id
+  depends_on   = [module.keyvault]
+}
+
 data "azurerm_key_vault_secret" "db_password" {
   name         = "db-password"                   # <-- name of the secret in Key Vault
   key_vault_id = module.keyvault.vault_id   # <-- ensure this matches your Key Vault module output
   depends_on   = [module.keyvault]
+}
+data "azuread_service_principal" "terraform_sp" {
+  display_name = "terrraform-sp" # Or use application_id = "..."
 }
 
 module "vm" {
@@ -47,8 +92,8 @@ module "vm" {
      resource_group_name    = module.resource_group.name
      vm_size                = "Standard_B1s"
      admin_username         = var.admin_username
-     public_key_path        = var.public_key_path
-     private_key_path       = var.private_key_path
+     private_key        = data.azurerm_key_vault_secret.ssh_public_key.value
+     public_key        = data.azurerm_key_vault_secret.ssh_private_key.value
      subnet_id              = module.network.subnet_ids[0] 
      depends_on             = [module.network, module.nsg]
    }

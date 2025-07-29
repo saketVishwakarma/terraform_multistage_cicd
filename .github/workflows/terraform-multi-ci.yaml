@@ -1,0 +1,34 @@
+# .github/workflows/deploy.yaml
+name: Terraform Azure Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Terraform environment to deploy'
+        required: true
+        type: choice
+        options:
+          - dev
+          - stage
+          - prod
+      action:
+        description: 'Terraform Action to Perform'
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+      confirm_destroy:
+        description: 'Type YES to confirm destroy (required only if action is destroy)'
+        required: false
+
+jobs:
+  call-terraform-workflow:
+    uses: ./.github/workflows/_terraform_template.yaml
+    with:
+      environment: ${{ github.event.inputs.environment }}
+      action: ${{ github.event.inputs.action }}
+      confirm_destroy: ${{ github.event.inputs.confirm_destroy }}
+    secrets: inherit

@@ -1,297 +1,154 @@
-# Terraform Azure Infrastructure with Modules, Workspaces, Key Vault, and GitHub Actions CI/CD
 
-## 📌 Project Overview
-This project demonstrates a **modular Terraform setup for Azure** that includes best practices such as:
-- Separation of concerns with **modules** for reusable components (e.g., VM, Storage, Network, Key Vault)
-- **Environment-specific configurations** using **Terraform workspaces**
-- Usage of **Azure Key Vault for secrets management**
-- **CI/CD automation with GitHub Actions** including manual approvals, plan artifacts, and notifications
+# 🌐 Terraform Azure Infrastructure with GitHub Actions CI/CD
 
----
+## 📟 Project Overview
 
-## 🛠️ Why This Setup?
-To simulate real-world cloud infrastructure deployment while learning or showcasing:
-- Modular Terraform architecture
-- Multi-environment (dev, stage, prod) management
-- Secure secrets handling using Azure Key Vault
-- Safe, auditable, and automated provisioning via GitHub CI/CD
+This project automates the provisioning of Azure infrastructure using **Terraform** modules, executed through **GitHub Actions** CI/CD pipelines. It supports **multi-environment deployments** (`dev`, `stage`, and `prod`) with isolated backends and reusable modules.
+
+Key features:
+
+- Infrastructure-as-Code with **Terraform modules**
+- **GitHub Actions** for deployment automation
+- **Environment-specific directories** with separate backends
+- Slack alerts and **manual approval gates**
+- Runtime selection: choose environment and destroy/apply action interactively
 
 ---
 
-## 📁 Project Structure
-```
-terraform_multistage/
-├── modules/
-│   ├── keyvault/
-│   ├── virtualMachine/
-│   ├── storage/
-│   ├── database/
-│   ├── network/
-│   └── resource_group/
-├── environments/
-│   ├── dev/
-│   │   ├── main.tf
-│   │   ├── variables.tf
-│   │   ├── terraform.tfvars (not committed)
-│   │   └── dev.backend.tfvars
-│   ├── stage/
-│   └── prod/
-└── .github/workflows/
-    └── terraform_pipeline.yml
-```
+## ✅ Advantages
+
+- **Reusable Modules**: Clean separation and reuse across environments
+- **Environment Isolation**: Dev, Stage, Prod have separate state backends
+- **Automated CI/CD**: GitHub Actions ensures consistent, auditable deployments
+- **Security & Secrets**: Uses Azure Key Vault and GitHub Secrets securely
+- **Observability**: Slack notifications and manual approvals enhance control and visibility
+- **Scalability**: Easily extend infrastructure by updating or adding modules
 
 ---
 
-## 🔐 Azure Key Vault Integration
-- Key Vault is created in the `keyvault` module
-- Secret (e.g., DB password) is stored securely
-- Other modules (like `database`) access it via `data.azurerm_key_vault_secret`
-- Secrets are **not exposed in tfvars or state files**
+## 📦 Module Structure & Explanation
 
-### Sample Code:
-```hcl
-resource "azurerm_key_vault_secret" "db_password" {
-  name         = "db-password"
-  value        = var.db_password
-  key_vault_id = azurerm_key_vault.keyvault.id
-}
-```
+Each Terraform module is purpose-built for a specific Azure resource:
+
+### 1. `resource_group` Module
+Creates Azure Resource Groups for each environment. All other resources are nested under this.
+
+### 2. `network` Module
+Provisions Virtual Networks (VNets), subnets, and peerings as needed.
+
+### 3. `nsg` Module
+Defines Network Security Groups and attaches them to subnets or network interfaces.
+
+### 4. `vm` Module
+Deploys Virtual Machines with required extensions and configurations.
+
+### 5. `ssh_key` Module
+Generates or references existing SSH keys and stores them in Key Vault.
+
+### 6. `key_vault` Module
+Creates Azure Key Vault to store secrets like passwords, SSH keys, or certificates.
+
+### 7. `database` Module
+Provisions databases (like Azure SQL or PostgreSQL) with secure credentials.
+
+### 8. `storage` Module
+Creates Azure Storage accounts with lifecycle rules (for blob lifecycle management).
 
 ---
 
-## 🧪 Terraform Workspaces Explained
-Each environment (dev, stage, prod) uses a **dedicated Terraform workspace**.
-- Automatically selected in CI/CD pipeline
-- Enables separate state management
+## ⚙️ Module Lifecycle Customizations
+
+- **`lifecycle` blocks** are used to control resource replacement and updates.
+  - e.g., `create_before_destroy` for avoiding downtime
+- **`depends_on`** ensures modules deploy in a specific order.
+  - e.g., VM depends on network and NSG modules.
+
+---
+
+## 🌚 Workspaces vs Multiple Environment Directories
+
+| Aspect                  | Terraform Workspaces  | Environment Directory Setup |
+|------------------------|------------------------|------------------------------|
+| **State separation**    | Yes (single backend)  | Yes (separate backends)     |
+| **Isolation level**     | Logical (same code)   | Physical (separate files)   |
+| **CI/CD compatibility** | Complex for pipelines | Simpler and clearer         |
+| **Recommended for**     | Small-scale projects  | Multi-team or enterprise    |
+
+In this project, **multiple environment directories** (`env/dev`, `env/stage`, `env/prod`) are used. Each has its own:
+
+- `backend.tf`
+- `terraform.tfvars`
+- `provider.tf`
+
+---
+
+## 🚀 GitHub Actions CI/CD Pipeline
+
+### Advantages:
+
+- **Automation**: Triggers on code push or pull requests
+- **Input prompts**: Select environment and whether to `apply` or `destroy`
+- **Manual approvals**: Protect critical environments (like production)
+- **Notifications**: Integrated with Slack for build status updates
+- **Secret Management**: Uses GitHub Secrets and Key Vault integration
+
+---
+
+## 🔐 Creating Azure Service Principal for Terraform
+
+Run the following command:
 
 ```bash
-terraform workspace select dev || terraform workspace new dev
+az ad sp create-for-rbac   --name "terraform-cicd-sp"   --role="Contributor"   --scopes="/subscriptions/<your-subscription-id>"   --sdk-auth
 ```
 
-This ensures infra changes for one env don't affect others.
+Copy the JSON output and save it as a GitHub Secret named `AZURE_CREDENTIALS`.
 
----
----
+**Note:** You’ll also need to set these secrets in your GitHub repo:
 
-## 🧪 Variable Validation Example
-
-To avoid invalid values (e.g., for PostgreSQL SKU), we use Terraform's built-in validation block:
-
-```hcl
-variable "sku_name" {
-  type        = string
-  description = "Valid SKU name for PostgreSQL Flexible Server"
-
-  validation {
-    condition = contains([
-      "Standard_B1ms",
-      "Standard_B2ms",
-      "Standard_D2s_v3",
-      "Standard_D4s_v3",
-      "Standard_E2s_v3"
-    ], var.sku_name)
-
-    error_message = "Invalid SKU name! Allowed values are: Standard_B1ms, Standard_B2ms, Standard_D2s_v3, Standard_D4s_v3, Standard_E2s_v3."
-  }
-}
-```
-
-This prevents misconfigurations by enforcing only valid options.
+- `ARM_CLIENT_ID`
+- `ARM_CLIENT_SECRET`
+- `ARM_SUBSCRIPTION_ID`
+- `ARM_TENANT_ID`
 
 ---
 
-## 🔁 Lifecycle Rules
+## 💬 Slack Notification Webhook Setup
 
-We used the `lifecycle` block to control Terraform's behavior during updates or deletes. Example:
+1. Go to your Slack channel
+2. Install **"Incoming Webhooks"** from Slack App Directory
+3. Configure the app and choose a channel
+4. Copy the **Webhook URL**
+5. Add it as a GitHub Secret in your repo:
+   - Name: `SLACK_WEBHOOK_URL`
 
-```hcl
-resource "azurerm_storage_account" "example" {
-  name                     = var.name
-  resource_group_name      = var.resource_group_name
-  location                 = var.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
+### Example Slack Notification in GitHub Actions:
 
-  lifecycle {
-    prevent_destroy = true
-    ignore_changes  = [tags]
-  }
-}
-```
-
-- `prevent_destroy`: Protects critical resources from accidental deletion.
-- `ignore_changes`: Avoids unnecessary updates due to tag drift.
-
----
-
-## ⛓ depends_on Usage
-
-We used `depends_on` to ensure one module/resource waits for another. Example:
-
-```hcl
-module "database" {
-  source              = "../../modules/database"
-  ...
-  depends_on          = [module.vm]
-}
-```
-
-This guarantees correct provisioning order, even across modules, especially when implicit dependencies don't exist.
----
-
-## 🔄 CI/CD Pipeline with GitHub Actions
-
-### ✅ Key Features:
-- Trigger via manual dispatch (workflow_dispatch)
-- Choose environment and destroy mode
-- Auto-selects workspace based on input
-- Runs `terraform fmt`, `validate`, `plan`
-- Uploads `tfplan` file as artifact
-- Requires **manual approval** before apply
-- Supports **safe destroy** with `YES` confirmation
-- Sends **Slack notifications** on destroy
-
-### 🧩 Dynamic Variable Usage
-Secrets and sensitive variables are **fetched via GitHub Secrets**, e.g.:
 ```yaml
--var="location=${{ secrets.TF_DEV_LOCATION }}"
-```
-
-### ✅ Security Practices
-- `terraform.tfvars` is excluded from repo
-- Sensitive values stored in GitHub Secrets / Azure Key Vault
-- Manual approvals for destructive operations
-- Slack alerts for visibility
-
-### 🧾 Sample GitHub Workflow (simplified):
-```yaml
-on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        type: choice
-        options: [dev, stage, prod]
-
-jobs:
-  plan:
-    steps:
-      - terraform init
-      - terraform plan -out=tfplan
-      - upload tfplan
-  apply:
-    needs: plan
-    environment: terraform-${{ github.event.inputs.environment }}
-    steps:
-      - download tfplan
-      - terraform apply tfplan
+- name: Notify Slack
+  uses: 8398a7/action-slack@v3
+  with:
+    status: ${{ job.status }}
+    fields: repo,message,commit,author,job
+  env:
+    SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 ```
 
 ---
 
-## 📣 Slack Notification Setup
+## 🏁 How to Run
 
-To receive alerts in Slack when a destroy operation is triggered:
-
-### 🔧 Step 1: Create a Slack Webhook
-1. Go to your Slack Workspace
-2. Visit: https://api.slack.com/apps → Create a new app
-3. Add **Incoming Webhooks** feature
-4. Enable it and generate a Webhook URL
-5. Choose the channel you want notifications sent to
-6. Copy the Webhook URL (e.g., `https://hooks.slack.com/services/...`)
-
-### 🔧 Step 2: Add the Webhook to GitHub Secrets
-- Go to your GitHub repo → Settings → Secrets and Variables → Actions
-- Add new secret:
-  - Name: `SLACK_WEBHOOK_URL`
-  - Value: your Slack Webhook URL
-
-### 🔧 Step 3: Use it in Your CI/CD Workflow
-In the `terraform_pipeline.yml`, include this step after apply:
-```yaml
-- name: Notify on Destroy
-  if: env.DESTROY_MODE == 'true'
-  run: |
-    curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }}       -H 'Content-type: application/json'       --data "{
-        "text": "🚨 *Terraform Destroy Alert*
-Workspace: *$TF_WORKSPACE*
-Actor: *${{ github.actor }}*
-Repo: *${{ github.repository }}*
-🔗 <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>",
-        "username": "Terraform Bot",
-        "icon_emoji": ":warning:"
-      }"
-```
-
-You’ll now receive messages in your designated Slack channel for all destroy actions.
+1. Push changes to GitHub
+2. GitHub Action prompts:
+   - Select environment (dev/stage/prod)
+   - Choose action: `apply` or `destroy`
+3. Wait for approval (if configured)
+4. Pipeline applies Terraform modules and notifies via Slack
 
 ---
 
-## 🧑‍💻 Azure Setup Instructions
+## 🗺️ Architecture Diagram
 
-### 1️⃣ Create a Service Principal
-```bash
-az login
-az ad sp create-for-rbac --name "terraform-sp"   --role="Contributor"   --scopes="/subscriptions/<your-subscription-id>"   --sdk-auth
-```
-Copy the full JSON output and save in GitHub Secrets as `AZURE_CREDENTIALS`
+![Terraform Azure GitHub Actions Architecture](./architecture.png)
 
-### 2️⃣ Grant Key Vault Access
-Assign `Key Vault Secrets User` role to the SP:
-```bash
-az keyvault set-policy --name <vault-name>   --spn <appId> --secret-permissions get list
-```
-
----
-
-## 📦 Using the Project
-
-### ▶️ To Deploy Infrastructure:
-1. Go to GitHub Actions → Select `Terraform Azure Pipeline`
-2. Choose environment (`dev`, `stage`, `prod`)
-3. Click **Run workflow**
-
-### ❌ To Destroy Infrastructure:
-1. Select `destroy: true`
-2. Type `YES` in confirm_destroy
-
-
-## 🔑 Required GitHub Secrets
-
-To keep your configuration secure, store the following variables in your **GitHub Secrets** (`Settings → Secrets and variables → Actions`):
-
-| Secret Name                          | Description                                    |
-|-------------------------------------|------------------------------------------------|
-| `AZURE_CREDENTIALS`                 | Azure service principal JSON                   |
-| `TF_DEV_LOCATION`                   | Azure region for dev (e.g., eastus)            |
-| `TF_DEV_ADMIN_USER`                 | Admin username for dev VMs                     |
-| `TF_DEV_PUBLIC_KEY`                 | SSH public key content (not path)              |
-| `TF_DEV_PRIVATE_KEY`                | SSH private key content (not path)             |
-| `TF_STAGE_LOCATION`                | Azure region for stage                         |
-| `TF_STAGE_ADMIN_USER`              | Admin user for stage                           |
-| `TF_STAGE_PUBLIC_KEY`              | SSH public key for stage                       |
-| `TF_STAGE_PRIVATE_KEY`             | SSH private key for stage                      |
-| `TF_PROD_LOCATION`                 | Azure region for prod                          |
-| `TF_PROD_ADMIN_USER`               | Admin user for prod                            |
-| `TF_PROD_PUBLIC_KEY`               | SSH public key for prod                        |
-| `TF_PROD_PRIVATE_KEY`              | SSH private key for prod                       |
-| `SLACK_WEBHOOK_URL`                | Webhook URL to send Slack notifications        |
-
-Make sure all required values are formatted correctly and stored securely.
----
-
-## ✅ Summary of Key Concepts Used
-| Concept            | Used In                           |
-|--------------------|------------------------------------|
-| Modules            | VM, Storage, Key Vault, DB         |
-| Workspaces         | dev, stage, prod isolation         |
-| Key Vault          | Secrets management                 |
-| GitHub Actions     | CI/CD automation                   |
-| Secrets            | GitHub + Azure Key Vault           |
-| Manual Approval    | Safe Apply step                    |
-| Destroy Safety     | Double confirm for destructive ops |
-| Slack Notification | Destroy alerts in Slack channel    |
-
----
-
-Made with ❤️ using Terraform and GitHub Actions to reflect real-world DevOps practices.
+*(Ensure you have the architecture diagram saved in the root of your repo as `terraform_azure_architecture.png`)*

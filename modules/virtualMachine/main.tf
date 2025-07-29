@@ -35,21 +35,21 @@ resource "azurerm_linux_virtual_machine" "vm" {
       version   = "latest"
     }
     admin_ssh_key {
-      username   = var.admin_username
-      public_key = file(var.public_key_path)
-    }
+  username   = var.admin_username
+  public_key = var.public_key
+}
     provisioner "remote-exec" {
       inline = [
         "sudo apt-get update -y",
         "sudo apt-get install -y nginx"
       ]
       connection {
-        type        = "ssh"
-        user        = var.admin_username
-        host        = azurerm_public_ip.public_ip.ip_address
-        private_key = file(var.private_key_path)
-        timeout     = "5m"
-      }
+      type        = "ssh"
+      user        = var.admin_username
+      host        = azurerm_public_ip.public_ip.ip_address
+      private_key = var.private_key
+      timeout     = "5m"
+    }
     }
 lifecycle {
       ignore_changes = [admin_ssh_key]

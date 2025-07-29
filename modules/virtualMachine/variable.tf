@@ -23,11 +23,12 @@ variable "admin_username" {
        type        = string
        description = "Admin username for SSH"
      }
-variable "public_key_path" {
+variable "public_key" {
        type        = string
        description = "Path to SSH public key"
      }
-variable "private_key_path" {
+variable "private_key" {
        type        = string
+       sensitive = true
        description = "Path to SSH private key"
      }
