@@ -1,5 +1,5 @@
-# .github/workflows/deploy.yaml
 name: Terraform Azure Pipeline
+
 on:
   workflow_dispatch:
     inputs:
@@ -22,14 +22,57 @@ on:
       confirm_destroy:
         description: 'Type YES to confirm destroy (required only if action is destroy)'
         required: false
+
 permissions:
   id-token: write
   contents: read
+
 jobs:
-  call-terraform-workflow:
+  plan:
+    if: github.event.inputs.action == 'plan'
     uses: ./.github/workflows/_terraform_template.yaml
     with:
       environment: ${{ github.event.inputs.environment }}
-      action: ${{ github.event.inputs.action }}
-      confirm_destroy: ${{ github.event.inputs.confirm_destroy }}
+      action: plan
+      confirm_destroy: ''
+    secrets: inherit
+
+  apply_approval:
+    if: github.event.inputs.action == 'apply'
+    runs-on: ubuntu-latest
+    environment:
+      name: terraform-${{ github.event.inputs.environment }}
+      # Manual approval required before proceeding to apply
+      # Add required reviewers in GitHub UI under repository -> Settings -> Environments
+    steps:
+      - name: Awaiting manual approval for Apply
+        run: echo "Manual approval required before apply. Approve in GitHub environment UI."
+
+  apply:
+    if: github.event.inputs.action == 'apply'
+    needs: apply_approval
+    uses: ./.github/workflows/_terraform_template.yaml
+    with:
+      environment: ${{ github.event.inputs.environment }}
+      action: apply
+      confirm_destroy: ''
+    secrets: inherit
+
+  destroy_approval:
+    if: github.event.inputs.action == 'destroy' && github.event.inputs.confirm_destroy == 'YES'
+    runs-on: ubuntu-latest
+    environment:
+      name: terraform-${{ github.event.inputs.environment }}
+    steps:
+      - name: Awaiting manual approval for Destroy
+        run: echo "Manual approval required before destroy. Approve in GitHub environment UI."
+
+  destroy:
+    if: github.event.inputs.action == 'destroy' && github.event.inputs.confirm_destroy == 'YES'
+    needs: destroy_approval
+    uses: ./.github/workflows/_terraform_template.yaml
+    with:
+      environment: ${{ github.event.inputs.environment }}
+      action: destroy
+      confirm_destroy: YES
     secrets: inherit
