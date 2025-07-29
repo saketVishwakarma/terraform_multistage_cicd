@@ -92,13 +92,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
             name: tfplan-${{ inputs.environment }}
-            path: tfplan
+            path: environments/${{ inputs.environment }}/tfplan
 
       - name: Download Plan Artifact
         if: inputs.action == 'apply' || inputs.action == 'destroy'
         uses: actions/download-artifact@v4
         with:
             name: tfplan-${{ inputs.environment }}
+            path: environments/${{ inputs.environment }}
 
       - name: Terraform Apply
         if: inputs.action == 'apply'
