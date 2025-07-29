@@ -1,8 +1,4 @@
 name: Reusable Terraform Template
-
-description: >
-  Template to plan, apply, or destroy Terraform infrastructure per environment.
-
 on:
   workflow_call:
     inputs:
@@ -41,6 +37,9 @@ on:
 jobs:
   terraform:
     name: Terraform ${{ inputs.action }}
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-latest
     defaults:
       run:
