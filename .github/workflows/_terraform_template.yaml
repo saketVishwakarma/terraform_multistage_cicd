@@ -12,6 +12,9 @@ on:
       action:
         required: true
         type: string # 'plan' | 'apply' | 'destroy'
+      confirm_destroy:
+        required: true
+        type: string
 
     secrets:
       AZURE_CLIENT_ID:
@@ -100,7 +103,7 @@ jobs:
           ARM_USE_OIDC: true
 
       - name: Terraform Destroy
-        if: inputs.action == 'destroy'
+        if: inputs.action == 'destroy' && inputs.confirm_destroy== 'yes'
         run: >
           terraform plan -destroy \
             -var="location=${{ secrets.TF_DEV_LOCATION }}" \
