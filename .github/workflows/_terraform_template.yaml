@@ -91,8 +91,14 @@ jobs:
         if: inputs.action == 'plan'
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan-${{ inputs.environment }}
-          path: environments/${{ inputs.environment }}/tfplan
+            name: tfplan-${{ inputs.environment }}
+            path: tfplan
+
+      - name: Download Plan Artifact
+        if: inputs.action == 'apply' || input.action == 'destroy'
+        uses: actions/download-artifact@v4
+        with:
+            name: tfplan-${{ inputs.environment }}
 
       - name: Terraform Apply
         if: inputs.action == 'apply'
