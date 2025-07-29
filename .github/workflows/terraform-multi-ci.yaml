@@ -22,7 +22,9 @@ on:
       confirm_destroy:
         description: 'Type YES to confirm destroy (required only if action is destroy)'
         required: false
-
+permissions:
+  id-token: write
+  contents: read
 jobs:
   call-terraform-workflow:
     uses: ./.github/workflows/_terraform_template.yaml
