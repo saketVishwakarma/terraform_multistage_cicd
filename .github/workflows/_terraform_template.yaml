@@ -95,7 +95,7 @@ jobs:
             path: tfplan
 
       - name: Download Plan Artifact
-        if: inputs.action == 'apply' || input.action == 'destroy'
+        if: inputs.action == 'apply' || inputs.action == 'destroy'
         uses: actions/download-artifact@v4
         with:
             name: tfplan-${{ inputs.environment }}
