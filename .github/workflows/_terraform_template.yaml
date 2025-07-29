@@ -111,7 +111,7 @@ jobs:
           ARM_USE_OIDC: true
 
       - name: Terraform Destroy
-        if: inputs.action == 'destroy' && inputs.confirm_destro y== 'yes'
+        if: inputs.action == 'destroy' && inputs.confirm_destroy == 'yes'
         run: >
           terraform plan -destroy \
             -var="location=${{ secrets.TF_DEV_LOCATION }}" \
