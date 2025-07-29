@@ -1,41 +1,46 @@
 module "resource_group" {
-     source  = "../../modules/resourcegroup"
-     name    = "dev-rg"
-     location = var.location
+  source   = "../../modules/resourcegroup"
+  name     = "dev-rg"
+  location = var.location
 }
+
 module "network" {
-     source              = "../../modules/network"
-     vnet_name          = "dev-vnet"
-     address_space      = ["10.0.0.0/16"]
-     subnets            = [{ name = "subnet1", address_prefix = "10.0.1.0/24" }]
-     location           = var.location
-     resource_group_name = module.resource_group.name
+  source               = "../../modules/network"
+  vnet_name            = "dev-vnet"
+  address_space        = ["10.0.0.0/16"]
+  subnets              = [{ name = "subnet1", address_prefix = "10.0.1.0/24" }]
+  location             = var.location
+  resource_group_name  = module.resource_group.name
 }
+
 module "nsg" {
-     source              = "../../modules/nsg"
-     name                = "dev-nsg"
-     location            = var.location
-     resource_group_name = module.resource_group.name
+  source              = "../../modules/nsg"
+  name                = "dev-nsg"
+  location            = var.location
+  resource_group_name = module.resource_group.name
 }
+
 module "storage" {
-     source                  = "../../modules/storage"
-     storage_account_name   = "devstorageacct"
-     container_name         = "devcontainer"
-     location               = var.location
-     resource_group_name    = module.resource_group.name
+  source                = "../../modules/storage"
+  storage_account_name  = "devstorageacct"
+  container_name        = "devcontainer"
+  location              = var.location
+  resource_group_name   = module.resource_group.name
 }
+
 data "azuread_service_principal" "terraform_sp" {
   display_name = "terrraform-sp"
 }
+
 module "keyvault" {
-     source              = "../../modules/keyvault"
-     name                = "dev-keyvault"
-     location            = var.location
-     db_password         = var.db_password
-     resource_group_name = module.resource_group.name
-     tenant_id           = var.tenant_id
-     object_id = data.azuread_service_principal.terraform_sp.object_id
-     depends_on          = [module.storage]
+  source              = "../../modules/keyvault"
+  name                = "dev-keyvault"
+  location            = var.location
+  db_password         = var.db_password
+  resource_group_name = module.resource_group.name
+  tenant_id           = var.tenant_id
+  object_id           = data.azuread_service_principal.terraform_sp.object_id
+  depends_on          = [module.storage]
 }
 
 data "azurerm_key_vault_secret" "ssh_private_key" {
@@ -51,60 +56,40 @@ data "azurerm_key_vault_secret" "ssh_public_key" {
 }
 
 data "azurerm_key_vault_secret" "db_password" {
-  name         = "db-password"                   # name of the secret in Key Vault
-  key_vault_id = module.keyvault.vault_id   # ensure this matches your Key Vault module output
+  name         = "db-password"
+  key_vault_id = module.keyvault.vault_id
   depends_on   = [module.keyvault]
 }
-
 
 module "ssh_keys" {
   source                   = "../../modules/ssh_keys_to_keyvault"
   keyvault_id             = module.keyvault.vault_id
   private_key_secret_name = "dev-ssh-private-key"
   public_key_secret_name  = "dev-ssh-public-key"
-  depends_on = [ module.keyvault ]
-}
-data "azurerm_key_vault_secret" "ssh_private_key" {
-  name         = "dev-ssh-private-key"
-  key_vault_id = module.keyvault.vault_id
-  depends_on   = [module.keyvault]
-}
-
-data "azurerm_key_vault_secret" "ssh_public_key" {
-  name         = "dev-ssh-public-key"
-  key_vault_id = module.keyvault.vault_id
-  depends_on   = [module.keyvault]
-}
-
-data "azurerm_key_vault_secret" "db_password" {
-  name         = "db-password"                   # <-- name of the secret in Key Vault
-  key_vault_id = module.keyvault.vault_id   # <-- ensure this matches your Key Vault module output
-  depends_on   = [module.keyvault]
-}
-data "azuread_service_principal" "terraform_sp" {
-  display_name = "terrraform-sp" # Or use application_id = "..."
+  depends_on              = [module.keyvault]
 }
 
 module "vm" {
-     source                  = "../../modules/virtualMachine"
-     vm_name                = "dev-vm"
-     location               = var.location
-     resource_group_name    = module.resource_group.name
-     vm_size                = "Standard_B1s"
-     admin_username         = var.admin_username
-     private_key        = data.azurerm_key_vault_secret.ssh_public_key.value
-     public_key        = data.azurerm_key_vault_secret.ssh_private_key.value
-     subnet_id              = module.network.subnet_ids[0] 
-     depends_on             = [module.network, module.nsg]
-   }
+  source               = "../../modules/virtualMachine"
+  vm_name              = "dev-vm"
+  location             = var.location
+  resource_group_name  = module.resource_group.name
+  vm_size              = "Standard_B1s"
+  admin_username       = var.admin_username
+  private_key          = data.azurerm_key_vault_secret.ssh_public_key.value
+  public_key           = data.azurerm_key_vault_secret.ssh_private_key.value
+  subnet_id            = module.network.subnet_ids[0]
+  depends_on           = [module.network, module.nsg]
+}
+
 module "database" {
-     source                = "../../modules/database"
-     name                  = "dev-db"
-     location              = var.location
-     resource_group_name   = module.resource_group.name
-     db_username        = var.db_username
-     sku_name = var.sku_name
-     db_password        = data.azurerm_key_vault_secret.db_password.value
-     subnet_id             = module.network.subnet_ids[0]
-     depends_on            = [module.vm]
-   }
+  source               = "../../modules/database"
+  name                 = "dev-db"
+  location             = var.location
+  resource_group_name  = module.resource_group.name
+  db_username          = var.db_username
+  sku_name             = var.sku_name
+  db_password          = data.azurerm_key_vault_secret.db_password.value
+  subnet_id            = module.network.subnet_ids[0]
+  depends_on           = [module.vm]
+}
