@@ -83,6 +83,8 @@ jobs:
             -var="db_username=${{ secrets.TF_DEV_DB_USERNAME }}" \
             -var="db_password=${{ secrets.TF_DEV_DB_PASSWORD }}" \
             -var="sku_name=${{ secrets.TF_DEV_SKU_NAME }}" \
+            -var="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID}}" \
+            -var="client_id=${{ secrets.AZURE_CLIENT_ID}}"\
             -out=tfplan
 
       - name: Upload Plan Artifact
@@ -111,6 +113,8 @@ jobs:
             -var="db_username=${{ secrets.TF_DEV_DB_USERNAME }}" \
             -var="db_password=${{ secrets.TF_DEV_DB_PASSWORD }}" \
             -var="sku_name=${{ secrets.TF_DEV_SKU_NAME }}" \
+            -var="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID}}" \
+            -var="client_id=${{ secrets.AZURE_CLIENT_ID}}"\
             -out=tfplan && terraform apply -auto-approve tfplan
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
