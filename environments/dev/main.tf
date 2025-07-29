@@ -22,7 +22,7 @@ module "nsg" {
 
 module "storage" {
   source                = "../../modules/storage"
-  storage_account_name  = "devstorageacct"
+  storage_account_name  = "devstorageacct231"
   container_name        = "devcontainer"
   location              = var.location
   resource_group_name   = module.resource_group.name
