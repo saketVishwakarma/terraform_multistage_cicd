@@ -34,7 +34,7 @@ data "azuread_service_principal" "terraform_sp" {
 
 module "keyvault" {
   source              = "../../modules/keyvault"
-  name                = "dev-keyvault"
+  name                = "dev-keyvault124324"
   location            = var.location
   db_password         = var.db_password
   resource_group_name = module.resource_group.name
