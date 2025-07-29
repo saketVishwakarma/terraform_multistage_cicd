@@ -1,5 +1,8 @@
 # .github/workflows/deploy.yaml
 name: Terraform Azure Pipeline
+permissions:
+      id-token: write
+      contents: read
 
 on:
   workflow_dispatch:
