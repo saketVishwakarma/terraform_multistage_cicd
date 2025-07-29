@@ -74,7 +74,7 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        if: inputs.action == 'plan'
+        if: inputs.action == 'plan' || inputs.action= 'apply'
         run: >
           terraform plan \
             -var="location=${{ secrets.TF_DEV_LOCATION }}" \
@@ -88,14 +88,14 @@ jobs:
             -out=tfplan
 
       - name: Upload Plan Artifact
-        if: inputs.action == 'plan'
+        if: inputs.action == 'plan' || inputs.action== 'apply'
         uses: actions/upload-artifact@v4
         with:
             name: tfplan-${{ inputs.environment }}
             path: environments/${{ inputs.environment }}/tfplan
 
       - name: Download Plan Artifact
-        if: inputs.action == 'apply' || inputs.action == 'destroy'
+        if: inputs.action == 'plan' || inputs.action == 'apply'
         uses: actions/download-artifact@v4
         with:
             name: tfplan-${{ inputs.environment }}
