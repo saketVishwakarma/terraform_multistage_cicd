@@ -40,7 +40,12 @@ variable "sku_name" {
   }
 }
 
-variable "subscription_id" {}
-variable "tenant_id" {}
-variable "client_id" {}
+variable "subscription_id" {
+ type        = string
+  description = "Azure subscription ID"
+}
+variable "client_id" {
+ type        = string
+  description = "Azure Client ID"
+}
 
