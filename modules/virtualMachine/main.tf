@@ -2,7 +2,8 @@ resource "azurerm_public_ip" "public_ip" {
     name                = "${var.vm_name}-ip"
     location            = var.location
     resource_group_name = var.resource_group_name
-    allocation_method   = "Dynamic"
+    allocation_method   = "Static"
+    sku                 = "Standard"
   }
 resource "azurerm_network_interface" "nic" {
      name                = "${var.vm_name}-nic"
@@ -11,7 +12,7 @@ resource "azurerm_network_interface" "nic" {
     ip_configuration {
        name                          = "internal"
        subnet_id                     = var.subnet_id
-       private_ip_address_allocation = "Dynamic"
+       private_ip_address_allocation = "Static"
        public_ip_address_id          = azurerm_public_ip.public_ip.id
      }
 }
