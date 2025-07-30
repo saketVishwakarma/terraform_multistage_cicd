@@ -14,9 +14,9 @@ resource "azurerm_key_vault" "vault" {
     key_permissions = ["Get", "List","Delete"]
     secret_permissions = ["Get", "Set","Delete"]
   }
-  lifecycle {
-    prevent_destroy = true
-  }
+ # lifecycle {
+    #prevent_destroy = true
+  #}
 }
 resource "azurerm_key_vault_secret" "db_password" {
   name         = "db-password"
