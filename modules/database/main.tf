@@ -37,7 +37,7 @@ resource "azurerm_subnet" "postgres_subnet" {
      sku_name               = var.sku_name
      version                = "13"
      storage_mb             = 32768
-     elegated_subnet_id    = azurerm_subnet.postgres_subnet.id
+     delegated_subnet_id    = azurerm_subnet.postgres_subnet.id
      private_dns_zone_id =  azurerm_private_dns_zone.postgres_dns.id
      zone                   = "1"
      public_network_access_enabled = false
