@@ -11,8 +11,8 @@ resource "azurerm_key_vault" "vault" {
   access_policy {
     tenant_id = var.tenant_id
     object_id = var.object_id
-    key_permissions = ["Get", "List"]
-    secret_permissions = ["Get", "Set"]
+    key_permissions = ["Get", "List","Delete","Update"]
+    secret_permissions = ["Get", "Set","Delete","Update"]
   }
   lifecycle {
     prevent_destroy = true
