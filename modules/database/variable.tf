@@ -45,3 +45,6 @@ variable "sku_name" {
 variable "vnet_id" {
   
 }
+variable "vnet_name" {
+  
+}
