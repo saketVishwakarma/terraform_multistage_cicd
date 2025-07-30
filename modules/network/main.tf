@@ -10,14 +10,7 @@ resource "azurerm_subnet" "subnet" {
     address_prefixes     = [var.subnets[count.index].address_prefix]
     resource_group_name  = var.resource_group_name
     virtual_network_name = azurerm_virtual_network.vnet.name
-   delegation {
-    name = "delegation"
-
-    service_delegation {
-      name    = "Microsoft.DBforPostgreSQL/flexibleServers"
-      actions = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    }
-  }
+  
 
     lifecycle {
         create_before_destroy = true
