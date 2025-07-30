@@ -92,4 +92,5 @@ module "database" {
   db_password          = data.azurerm_key_vault_secret.db_password.value
   subnet_id            = module.network.subnet_ids[0]
   depends_on           = [module.vm]
+  vnet_id = module.network.vnet_id
 }

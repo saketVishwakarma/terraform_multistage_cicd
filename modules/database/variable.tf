@@ -42,3 +42,6 @@ variable "sku_name" {
     error_message = "Invalid SKU name! Allowed values are: Standard_B1ms, Standard_B2ms, Standard_D2s_v3, Standard_D4s_v3, Standard_E2s_v3."
   }
 }
+variable "vnet_id" {
+  
+}
