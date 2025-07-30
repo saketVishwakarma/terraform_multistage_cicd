@@ -4,5 +4,7 @@ output "vnet_id" {
 output "subnet_ids" {
   value = [for s in azurerm_subnet.subnet : s.id]
 }
-
+output "vnet_name" {
+  value = azurerm_virtual_network.vnet.name
+}
 
