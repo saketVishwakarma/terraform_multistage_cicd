@@ -40,9 +40,15 @@ module "keyvault" {
   resource_group_name = module.resource_group.name
   tenant_id           = var.tenant_id
   object_id           = data.azuread_service_principal.terraform_sp.object_id
-  depends_on          = [module.storage]
+  depends_on          = [module.storage,module.ssh_keys]
 }
-
+module "ssh_keys" {
+  source                   = "../../modules/ssh_keys_to_keyvault"
+  keyvault_id             = module.keyvault.vault_id
+  private_key_secret_name = "dev-ssh-private-key"
+  public_key_secret_name  = "dev-ssh-public-key"
+  depends_on              = [module.keyvault]
+}
 data "azurerm_key_vault_secret" "ssh_private_key" {
   name         = "dev-ssh-private-key"
   key_vault_id = module.keyvault.vault_id
@@ -61,13 +67,7 @@ data "azurerm_key_vault_secret" "db_password" {
   depends_on   = [module.keyvault]
 }
 
-module "ssh_keys" {
-  source                   = "../../modules/ssh_keys_to_keyvault"
-  keyvault_id             = module.keyvault.vault_id
-  private_key_secret_name = "dev-ssh-private-key"
-  public_key_secret_name  = "dev-ssh-public-key"
-  depends_on              = [module.keyvault]
-}
+
 
 module "vm" {
   source               = "../../modules/virtualMachine"
