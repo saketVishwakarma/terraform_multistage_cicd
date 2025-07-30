@@ -31,6 +31,11 @@ module "ssh_keys" {
   source                   = "../../modules/ssh_keys_to_keyvault"
 }
 
+data "azurerm_key_vault_secret" "db_password" {
+  name         = "db-password"                   # <-- name of the secret in Key Vault
+  key_vault_id = module.keyvault.vault_id   # <-- ensure this matches your Key Vault module output
+  depends_on   = [module.keyvault]
+}
 data "azuread_service_principal" "terraform_sp" {
   display_name = "terraform-sp"
 }
