@@ -49,3 +49,4 @@ variable "client_id" {
   description = "Azure Client ID"
 }
 
+

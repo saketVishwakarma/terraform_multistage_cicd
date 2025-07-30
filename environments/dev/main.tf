@@ -27,6 +27,9 @@ module "storage" {
   location              = var.location
   resource_group_name   = module.resource_group.name
 }
+module "ssh_keys" {
+  source                   = "../../modules/ssh_keys_to_keyvault"
+}
 
 data "azuread_service_principal" "terraform_sp" {
   display_name = "terraform-sp"
@@ -42,30 +45,21 @@ module "keyvault" {
   object_id           = data.azuread_service_principal.terraform_sp.object_id
   depends_on          = [module.storage,module.ssh_keys]
 }
-module "ssh_keys" {
-  source                   = "../../modules/ssh_keys_to_keyvault"
-  keyvault_id             = module.keyvault.vault_id
-  private_key_secret_name = "dev-ssh-private-key"
-  public_key_secret_name  = "dev-ssh-public-key"
-  depends_on              = [module.keyvault]
-}
-data "azurerm_key_vault_secret" "ssh_private_key" {
+
+
+# Store SSH keys in Key Vault
+resource "azurerm_key_vault_secret" "private_key" {
   name         = "dev-ssh-private-key"
+  value        = module.ssh_keys.private_key_pem
   key_vault_id = module.keyvault.vault_id
-  depends_on   = [module.keyvault]
 }
 
-data "azurerm_key_vault_secret" "ssh_public_key" {
+resource "azurerm_key_vault_secret" "public_key" {
   name         = "dev-ssh-public-key"
+  value        = module.ssh_keys.public_key_openssh
   key_vault_id = module.keyvault.vault_id
-  depends_on   = [module.keyvault]
 }
 
-data "azurerm_key_vault_secret" "db_password" {
-  name         = "db-password"
-  key_vault_id = module.keyvault.vault_id
-  depends_on   = [module.keyvault]
-}
 
 
 
@@ -76,10 +70,10 @@ module "vm" {
   resource_group_name  = module.resource_group.name
   vm_size              = "Standard_B1s"
   admin_username       = var.admin_username
-  private_key          = data.azurerm_key_vault_secret.ssh_public_key.value
-  public_key           = data.azurerm_key_vault_secret.ssh_private_key.value
+  private_key          = module.ssh_keys.private_key_pem
+  public_key           = module.ssh_keys.public_key_openssh
   subnet_id            = module.network.subnet_ids[0]
-  depends_on           = [module.network, module.nsg]
+  depends_on           = [module.network, module.nsg,module.keyvault,module.ssh_keys]
 }
 
 module "database" {
