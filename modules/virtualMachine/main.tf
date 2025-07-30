@@ -44,19 +44,30 @@ resource "azurerm_linux_virtual_machine" "vm" {
   username   = var.admin_username
   public_key = var.public_key
     }
-    provisioner "remote-exec" {
-      inline = [
-        "sudo apt-get update -y",
-        "sudo apt-get install -y nginx"
-      ]
-      connection {
-      type        = "ssh"
-      user        = var.admin_username
-      host        = azurerm_public_ip.public_ip.ip_address
-      private_key = var.private_key
-      timeout     = "10m"
-    }
-    }
+   # provisioner "remote-exec" {
+    #  inline = [
+     #   "sudo apt-get update -y",
+      #  "sudo apt-get install -y nginx"
+      #]
+      #connection {
+      #type        = "ssh"
+      #user        = var.admin_username
+      #host        = azurerm_public_ip.public_ip.ip_address
+      #private_key = var.private_key
+      #timeout     = "10m"
+    #}
+    #}
+    # ✅ Cloud-init script to install NGINX
+  custom_data = base64encode(<<EOF
+#!/bin/bash
+sleep 15
+apt-get update -y
+apt-get install -y nginx
+systemctl enable nginx
+systemctl start nginx
+EOF
+  )
+
 lifecycle {
       ignore_changes = [admin_ssh_key]
     }
