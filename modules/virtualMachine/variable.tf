@@ -32,3 +32,7 @@ variable "private_key" {
        sensitive = true
        description = "Path to SSH private key"
      }
+variable "nsg_id" {
+  type = string
+  
+}

@@ -75,6 +75,7 @@ module "vm" {
   resource_group_name  = module.resource_group.name
   vm_size              = "Standard_B1s"
   admin_username       = var.admin_username
+  nsg_id = module.nsg.nsg_id
   private_key          = module.ssh_keys.private_key_pem
   public_key           = module.ssh_keys.public_key_openssh
   subnet_id            = module.network.subnet_ids[0]
