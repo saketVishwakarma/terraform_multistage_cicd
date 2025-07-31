@@ -1,4 +1,4 @@
-name: Terraform Azure Pipeline
+name: Terraform Multi-Environment CI/CD
 
 on:
   workflow_dispatch:

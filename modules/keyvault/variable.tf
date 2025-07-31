@@ -20,7 +20,7 @@ variable "object_id" {
      }
 variable "db_password" {
   type = string
-  description = "password for databse setup "
+  description = "password for database "
   sensitive = true
   
 }

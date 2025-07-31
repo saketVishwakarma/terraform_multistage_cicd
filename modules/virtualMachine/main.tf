@@ -1,3 +1,4 @@
+#public ip for azure vm 
 resource "azurerm_public_ip" "public_ip" {
     name                = "${var.vm_name}-ip"
     location            = var.location
@@ -5,6 +6,7 @@ resource "azurerm_public_ip" "public_ip" {
     allocation_method   = "Static"
     sku                 = "Standard"
   }
+ #network interface for azure vm
 resource "azurerm_network_interface" "nic" {
      name                = "${var.vm_name}-nic"
      location            = var.location
@@ -12,15 +14,17 @@ resource "azurerm_network_interface" "nic" {
     ip_configuration {
        name                          = "internal"
        subnet_id                     = var.subnet_id
-       private_ip_address_allocation = "Dynamic"
+       private_ip_address_allocation = "Dynamic" # you can set it to static when you have ip you need to provide
        public_ip_address_id          = azurerm_public_ip.public_ip.id
      }
 }
-
+#azure network security group amd interface association for the VM
 resource "azurerm_network_interface_security_group_association" "nic_nsg_association" {
   network_interface_id      = azurerm_network_interface.nic.id
   network_security_group_id = var.nsg_id
 }
+
+#main block of vm 
 resource "azurerm_linux_virtual_machine" "vm" {
     name                  = var.vm_name
     location              = var.location
@@ -28,7 +32,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
     size                  = var.vm_size
     admin_username        = var.admin_username
     network_interface_ids = [azurerm_network_interface.nic.id]
-    disable_password_authentication = true
+    disable_password_authentication = true # Disable password authentication for security
     os_disk {
       caching              = "ReadWrite"
       storage_account_type = "Standard_LRS"
@@ -41,9 +45,11 @@ resource "azurerm_linux_virtual_machine" "vm" {
       version   = "latest"
     }
     admin_ssh_key {
-  username   = var.admin_username
-  public_key = var.public_key
+      username   = var.admin_username
+      public_key = var.public_key
     }
+    #you can use prvisioner to install packages or run commands on the VM after creation
+    # Uncomment the following block to install NGINX using remote-exec provisioner
    # provisioner "remote-exec" {
     #  inline = [
      #   "sudo apt-get update -y",
@@ -57,18 +63,17 @@ resource "azurerm_linux_virtual_machine" "vm" {
       #timeout     = "10m"
     #}
     #}
-    # ✅ Cloud-init script to install NGINX
+# Cloud-init script to install NGINX
   custom_data = base64encode(<<EOF
-#!/bin/bash
-sleep 15
-apt-get update -y
-apt-get install -y nginx
-systemctl enable nginx
-systemctl start nginx
-EOF
-  )
-
-lifecycle {
+                #!/bin/bash
+                sleep 15
+                apt-get update -y
+                apt-get install -y nginx
+                systemctl enable nginx
+                systemctl start nginx
+              EOF
+             )
+  lifecycle {
       ignore_changes = [admin_ssh_key]
     }
   }

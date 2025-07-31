@@ -85,7 +85,7 @@ module "vm" {
 module "database" {
   source               = "../../modules/database"
   name                 = "dev-db12324265"
-  location             = "westus2"
+  location             = var.location
   vnet_name            =  module.network.vnet_name
   resource_group_name  = module.resource_group.name
   db_username          = var.db_username

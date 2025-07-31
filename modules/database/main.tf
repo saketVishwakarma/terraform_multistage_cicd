@@ -1,9 +1,11 @@
+
+#dns_zone required for postgres database
 resource "azurerm_private_dns_zone" "postgres_dns" {
   name                = "privatelink.postgres.database.azure.com"
   resource_group_name = var.resource_group_name
 }
 
-
+# Link the DNS zone to the virtual network
 resource "azurerm_private_dns_zone_virtual_network_link" "vnet_link" {
   name                  = "devvnet-link"
   resource_group_name   = var.resource_group_name
@@ -12,6 +14,8 @@ resource "azurerm_private_dns_zone_virtual_network_link" "vnet_link" {
   registration_enabled  = false
 }
 
+#separate subnet for postgres database with delegation
+# This subnet is specifically for the PostgreSQL Flexible Server
 resource "azurerm_subnet" "postgres_subnet" {
   name                 = "postgres-subnet"
   resource_group_name  = var.resource_group_name
@@ -28,6 +32,7 @@ resource "azurerm_subnet" "postgres_subnet" {
   }
 }
 
+#PostgreSQL Flexible Server resource
  resource "azurerm_postgresql_flexible_server" "db" {
      name                   = var.name
      resource_group_name    = var.resource_group_name
@@ -44,5 +49,6 @@ resource "azurerm_subnet" "postgres_subnet" {
 
     #lifecycle {
       # prevent_destroy = true
+      #set it true if you want to prevent accidental deletion
      #}
    }

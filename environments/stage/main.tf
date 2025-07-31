@@ -1,89 +1,97 @@
 module "resource_group" {
-     source  = "../../modules/resourcegroup"
-     name    = "stage-rg"
-     location = var.location
+  source   = "../../modules/resourcegroup"
+  name     = "stage-rg"
+  location = var.location
 }
+
 module "network" {
-     source              = "../../modules/network"
-     vnet_name          = "stage-vnet"
-     address_space      = ["10.0.0.0/16"]
-     subnets            = [{ name = "subnet1", address_prefix = "10.0.1.0/24" }]
-     location           = var.location
-     resource_group_name = module.resource_group.name
+  source               = "../../modules/network"
+  vnet_name            = "stage-vnet"
+  address_space        = ["10.0.0.0/16"]
+  subnets              = [{ name = "subnet1", address_prefix = "10.0.1.0/24" },{name = "subnet2", address_prefix = "10.0.1.1/24"}]
+  location             = var.location
+  resource_group_name  = module.resource_group.name
 }
+
 module "nsg" {
-     source              = "../../modules/nsg"
-     name                = "stage-nsg"
-     location            = var.location
-     resource_group_name = module.resource_group.name
+  source              = "../../modules/nsg"
+  name                = "stage-nsg"
+  location            = var.location
+  resource_group_name = module.resource_group.name
 }
+
 module "storage" {
-     source                  = "../../modules/storage"
-     storage_account_name   = "stagestorageacct"
-     container_name         = "stagecontainer"
-     location               = var.location
-     resource_group_name    = module.resource_group.name
+  source                = "../../modules/storage"
+  storage_account_name  = "stagestorageacct231"
+  container_name        = "stagecontainer"
+  location              = var.location
+  resource_group_name   = module.resource_group.name
 }
-
-data "azuread_service_principal" "terraform_sp" {
-  display_name = "terrraform-sp"
-}
-module "keyvault" {
-     source              = "../../modules/keyvault"
-     name                = "stage-keyvault"
-     location            = var.location
-     db_password         = var.db_password
-     resource_group_name = module.resource_group.name
-     tenant_id           = var.tenant_id
-     object_id = data.azuread_service_principal.terraform_sp.object_id
-     depends_on          = [module.storage]
-}
-
-
 module "ssh_keys" {
   source                   = "../../modules/ssh_keys_to_keyvault"
-  keyvault_id             = module.keyvault.vault_id
-  private_key_secret_name = "stage-ssh-private-key"
-  public_key_secret_name  = "stage-ssh-public-key"
-}
-data "azurerm_key_vault_secret" "ssh_private_key" {
-  name         = "stage-ssh-private-key"
-  key_vault_id = module.keyvault.vault_id
-  depends_on   = [module.keyvault]
-}
-
-data "azurerm_key_vault_secret" "ssh_public_key" {
-  name         = "stage-ssh-public-key"
-  key_vault_id = module.keyvault.vault_id
-  depends_on   = [module.keyvault]
 }
 
 data "azurerm_key_vault_secret" "db_password" {
-  name         = "db-password"                   # <-- name of the secret in Key Vault
-  key_vault_id = module.keyvault.vault_id   # <-- ensure this matches your Key Vault module output
+  name         = "db-password"                   
+  key_vault_id = module.keyvault.vault_id   
   depends_on   = [module.keyvault]
 }
+data "azuread_service_principal" "terraform_sp" {
+  display_name = "terraform-sp"
+}
+
+module "keyvault" {
+  source              = "../../modules/keyvault"
+  name                = "stage-keyvault124324"
+  location            = var.location
+  db_password         = var.db_password
+  resource_group_name = module.resource_group.name
+  tenant_id           = var.tenant_id
+  object_id           = data.azuread_service_principal.terraform_sp.object_id
+  depends_on          = [module.storage,module.ssh_keys]
+}
+
+
+# Store SSH keys in Key Vault
+resource "azurerm_key_vault_secret" "private_key" {
+  name         = "stage-ssh-private-key"
+  value        = module.ssh_keys.private_key_pem
+  key_vault_id = module.keyvault.vault_id
+}
+
+resource "azurerm_key_vault_secret" "public_key" {
+  name         = "stage-ssh-public-key"
+  value        = module.ssh_keys.public_key_openssh
+  key_vault_id = module.keyvault.vault_id
+}
+
+
+
 
 module "vm" {
-     source                  = "../../modules/virtualMachine"
-     vm_name                = "stage-vm"
-     location               = var.location
-     resource_group_name    = module.resource_group.name
-     vm_size                = "Standard_B1s"
-     admin_username         = var.admin_username
-     private_key        = data.azurerm_key_vault_secret.ssh_public_key.value
-     public_key        = data.azurerm_key_vault_secret.ssh_private_key.value
-     subnet_id              = module.network.subnet_ids[0] 
-     depends_on             = [module.network, module.nsg]
-   }
+  source               = "../../modules/virtualMachine"
+  vm_name              = "stage-vm12"
+  location             = var.location
+  resource_group_name  = module.resource_group.name
+  vm_size              = "Standard_B1s"
+  admin_username       = var.admin_username
+  nsg_id = module.nsg.nsg_id
+  private_key          = module.ssh_keys.private_key_pem
+  public_key           = module.ssh_keys.public_key_openssh
+  subnet_id            = module.network.subnet_ids[0]
+  depends_on           = [module.network, module.nsg,module.keyvault,module.ssh_keys]
+}
+
 module "database" {
-     source                = "../../modules/database"
-     name                  = "stage-db"
-     location              = var.location
-     resource_group_name   = module.resource_group.name
-     db_username        = var.db_username
-     sku_name = var.sku_name
-     db_password        = data.azurerm_key_vault_secret.db_password.value
-     subnet_id             = module.network.subnet_ids[0]
-     depends_on            = [module.vm]
-   }
+  source               = "../../modules/database"
+  name                 = "stage-db12324265"
+  location             = "westus2"
+  vnet_name            =  module.network.vnet_name
+  resource_group_name  = module.resource_group.name
+  db_username          = var.db_username
+  sku_name             = var.sku_name
+  db_password          = data.azurerm_key_vault_secret.db_password.value
+  subnet_id            = module.network.subnet_ids[0]
+  depends_on           = [module.vm]
+  vnet_id = module.network.vnet_id
+}

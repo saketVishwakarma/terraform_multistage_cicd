@@ -34,5 +34,6 @@ variable "private_key" {
      }
 variable "nsg_id" {
   type = string
+  description = "value of the Network Security Group ID"
   
 }
