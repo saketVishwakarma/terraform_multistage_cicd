@@ -1,10 +1,10 @@
-name: Reusable Terraform Template
+name: Run Terraform Actions
 on:
   workflow_call:
     inputs:
       environment:
         required: true
-        type: string
+        type: string # 'dev' | 'stage' | 'prod'
       action:
         required: true
         type: string # 'plan' | 'apply' | 'destroy'
@@ -100,7 +100,7 @@ jobs:
         with:
             name: tfplan-${{ inputs.environment }}
             path: environments/${{ inputs.environment }}
-
+# here using the plan artifact
       - name: Terraform Apply
         if: inputs.action == 'apply'
         run: terraform apply -auto-approve tfplan
@@ -109,7 +109,8 @@ jobs:
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
-
+# here using without managing the plan artifact
+        # run: terraform apply -auto-approve
       - name: Terraform Destroy
         if: inputs.action == 'destroy' && inputs.confirm_destroy == 'yes'
         run: |
@@ -136,7 +137,7 @@ jobs:
           curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
             -H 'Content-type: application/json' \
             --data '{
-              "text": "✅ Terraform *Apply* Succeeded for *${{ inputs.environment }}*.",
+              "text": "Terraform *Apply* Succeeded for *${{ inputs.environment }}*.",
               "username": "Terraform Bot",
               "icon_emoji": ":white_check_mark:"
             }'
@@ -147,7 +148,7 @@ jobs:
           curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
             -H 'Content-type: application/json' \
             --data '{
-              "text": "⚠️ Terraform *Destroy* Executed for *${{ inputs.environment }}*.",
+              "text": "Terraform *Destroy* Executed for *${{ inputs.environment }}*.",
               "username": "Terraform Bot",
               "icon_emoji": ":warning:"
             }'
